@@ -15,6 +15,7 @@ type Node struct {
 	ID        string    `json:"id"`
 	ClusterID string    `json:"cluster_id"`
 	Announce  []string  `json:"announce"`
+	TTL       string    `json:"ttl"`
 	Expiry    time.Time `json:"expiry"`
 	Updated   time.Time `json:"updated"`
 }
@@ -25,7 +26,8 @@ var (
 )
 
 const (
-	nodeTTL = 10 * time.Minute
+	defaultTTL = 10 * time.Minute
+	maxTTL     = 1 * time.Hour
 )
 
 func listNodes(w http.ResponseWriter, r *http.Request) {
@@ -71,8 +73,17 @@ func registerNode(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	parsedTTL := defaultTTL
+	if node.TTL != "" {
+		if d, err := time.ParseDuration(node.TTL); err == nil {
+			if d <= maxTTL {
+				parsedTTL = d
+			}
+		}
+	}
+
 	node.Updated = time.Now()
-	node.Expiry = node.Updated.Add(nodeTTL)
+	node.Expiry = node.Updated.Add(parsedTTL)
 
 	mu.Lock()
 	if nodes[node.ClusterID] == nil {
