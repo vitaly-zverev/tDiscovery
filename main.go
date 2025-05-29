@@ -24,10 +24,11 @@ type watchSubscriber struct {
 
 type server struct {
 	pb.UnimplementedClusterServer
-	mu         sync.RWMutex
-	affiliates map[string]*AffiliateRecord
-	watchers   map[int]*watchSubscriber
-	watchID    int
+	mu              sync.RWMutex
+	affiliates      map[string]*AffiliateRecord
+	watchers        map[int]*watchSubscriber
+	watchID         int
+	watchBufferSize int
 }
 
 type AffiliateRecord struct {
@@ -42,10 +43,11 @@ func makeKey(clusterID, affiliateID string) string {
 	return clusterID + "->" + affiliateID
 }
 
-func NewServer() *server {
+func NewServer(bufferSize int) *server {
 	return &server{
-		affiliates: make(map[string]*AffiliateRecord),
-		watchers:   make(map[int]*watchSubscriber),
+		affiliates:      make(map[string]*AffiliateRecord),
+		watchers:        make(map[int]*watchSubscriber),
+		watchBufferSize: bufferSize,
 	}
 }
 
@@ -250,7 +252,7 @@ func (s *server) List(ctx context.Context, req *pb.ListRequest) (*pb.ListRespons
 func (s *server) Watch(req *pb.WatchRequest, stream pb.Cluster_WatchServer) error {
 	clusterID := req.GetClusterId()
 
-	updates := make(chan *pb.WatchResponse, 32)
+	updates := make(chan *pb.WatchResponse, s.watchBufferSize)
 	s.mu.Lock()
 	id := s.watchID
 	s.watchID++
@@ -440,8 +442,9 @@ func main() {
 
 	// Параметры командной строки
 	var (
-		port       = flag.Int("port", 3001, "Port to listen on")
-		gcInterval = flag.Duration("gc-interval", 15*time.Second, "Garbage collection interval (e.g. 10s, 1m)")
+		port            = flag.Int("port", 3001, "Port to listen on")
+		gcInterval      = flag.Duration("gc-interval", 15*time.Second, "Garbage collection interval (e.g. 10s, 1m)")
+		watchBufferSize = flag.Int("watch-buffer-size", 32, "Size of buffered channel for watch updates")
 	)
 	flag.Parse()
 
@@ -452,12 +455,12 @@ func main() {
 
 	s := grpc.NewServer()
 
-	ns := NewServer()
+	ns := NewServer(*watchBufferSize)
 	ns.StartGC(*gcInterval)
 
 	pb.RegisterClusterServer(s, ns)
 
-	log.Printf("gRPC server listening on %s (GC interval: %s)", fmt.Sprintf(":%d", *port), gcInterval.String())
+	log.Printf("gRPC server listening on %s (GC interval: %s, Watch buffer size: %s )", fmt.Sprintf(":%d", *port), gcInterval.String(), fmt.Sprintf(":%d", *watchBufferSize))
 	if err := s.Serve(lis); err != nil {
 		log.Fatalf("failed to serve: %v", err)
 	}
