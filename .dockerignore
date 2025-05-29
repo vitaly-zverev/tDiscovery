@@ -1,0 +1,11 @@
+# THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
+#
+# Generated on 2025-05-26T20:21:33Z by kres 9f64b0d.
+
+*
+!main.go
+!go.mod
+!go.sum
+!.golangci.yml
+!README.md
+!.markdownlint.json
