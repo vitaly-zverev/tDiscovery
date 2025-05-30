@@ -1,5 +1,5 @@
 # Имя выходного бинарника
-BINARY_NAME = talos-discovery
+BINARY_NAME = tdiscovery
 
 # Путь к основному Go-файлу
 MAIN_FILE = main.go

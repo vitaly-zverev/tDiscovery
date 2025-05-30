@@ -1,10 +1,10 @@
-# talos-discovery
+# tDiscovery
 
 
 Быстрый старт для разработки:
 ```
  git clone https://github.com/siderolabs/discovery-api 
- git clone https://github.com/vitaly-zverev/talos-discovery && cd talos-discovery
+ git clone https://github.com/vitaly-zverev/tDiscovery && cd tDiscovery
  export PATH="$PATH:$(go env GOPATH)/bin"
 ```
 Собрать:
@@ -21,7 +21,7 @@ make OS=linux ARCH=amd64
 ```
 Примеры запуска:
 ```
- _out/talos-discovery
+ _out/tdiscovery
 2025/05/29 23:23:40 gRPC server listening on :3001 (GC interval: 15s)
 2025/05/29 23:23:55 garbage collection run  {"removed_clusters": 0, "removed_affiliates": 0, "current_clusters": 0, "current_affiliates": 0, "current_endpoints": 0,"current_subscriptions": 0}
 
@@ -41,5 +41,5 @@ grpcurl -proto v1alpha1/server/cluster.proto -import-path ../discovery-api/api -
 
 grpcurl -proto v1alpha1/server/cluster.proto -import-path ../discovery-api/api -plaintext -d '{"clusterId": "xyz"}' -H 'X-Real-IP: 1.2.3.4' localhost:3001 sidero.discovery.server.Cluster/Watch
 
-seq 1 10 | xargs -I{} grpcurl -proto v1alpha1/server/cluster.proto -import-path ./discovery-api/api -plaintext -d "{\"clusterId\": \"xyz\",\"affiliateId\":\"def-{}\",\"affiliateData\":\"MTIzCg==\",\"affiliateEndpoints\":\"MTIzCg==\"}" -H 'X-Real-IP: 1.2.3.4' localhost:3001 sidero.discovery.server.Cluster/AffiliateUpdate
+seq 1 10 | xargs -I{} grpcurl -proto v1alpha1/server/cluster.proto -import-path ../discovery-api/api -plaintext -d "{\"clusterId\": \"xyz\",\"affiliateId\":\"def-{}\",\"affiliateData\":\"MTIzCg==\",\"affiliateEndpoints\":\"MTIzCg==\"}" -H 'X-Real-IP: 1.2.3.4' localhost:3001 sidero.discovery.server.Cluster/AffiliateUpdate
 ```
