@@ -1,7 +1,15 @@
 # tDiscovery
 
+Для чего все это здесь:
+```
+talosctl get machineconfig --cluster demo --nodes 10.5.0.2 -o json | jq .spec | yq . | yq .cluster.discovery.registries.service
+endpoint: http://192.168.0.119:3001 # External service endpoint.  <--- Все ради вот этого 
+```
 
-
+Не стоит переоценивать этот R&D, он не является заменой промышленному https://discovery.talos.dev/, и, если Вы можете приобрести 
+полноценный сервисный пакет для https://github.com/siderolabs/discovery-service, то так и стоит поступить.
+Этот R&D скетч появился как альтернатива https://discovery.talos.dev/ в airgap проектах, где нет возможности приобрести сервисный пакет Omni, 
+доступ к discovery.talos.dev не возможен, а динамика в обнаружении узлов кластера требуется (в частности, это требование для KubeSpan)
 
 Быстрый старт для разработки:
 
