@@ -312,53 +312,6 @@ func (s *server) StartGC(interval time.Duration) {
 	}()
 }
 
-func (s *server) pruneExpired_() {
-	now := time.Now()
-	var expired []struct {
-		clusterID   string
-		affiliateID string
-	}
-
-	s.mu.Lock()
-	for key, rec := range s.affiliates {
-		if !rec.ExpiresAt.IsZero() && now.After(rec.ExpiresAt) {
-			expired = append(expired, struct {
-				clusterID   string
-				affiliateID string
-			}{
-				clusterID:   rec.ClusterID,
-				affiliateID: rec.AffiliateID,
-			})
-			delete(s.affiliates, key)
-		}
-	}
-	watchers := make([]*watchSubscriber, 0, len(s.watchers))
-	for _, sub := range s.watchers {
-		watchers = append(watchers, sub)
-	}
-	s.mu.Unlock()
-
-	// Отправляем уведомления для каждого удалённого
-	for _, exp := range expired {
-		update := &pb.WatchResponse{
-			Affiliates: []*pb.Affiliate{
-				{Id: exp.affiliateID},
-			},
-			Deleted: true,
-		}
-
-		for _, sub := range watchers {
-			if sub.clusterID == exp.clusterID {
-				select {
-				case sub.updates <- update:
-				default:
-					// пропустить, если подписчик не читает
-				}
-			}
-		}
-	}
-}
-
 func uniqueClusterIDs(items []struct {
 	clusterID, affiliateID string
 }) int {
@@ -460,7 +413,7 @@ func main() {
 
 	pb.RegisterClusterServer(s, ns)
 
-	log.Printf("gRPC server listening on %s (GC interval: %s, Watch buffer size: %s )", fmt.Sprintf(":%d", *port), gcInterval.String(), fmt.Sprintf(":%d", *watchBufferSize))
+	log.Printf("gRPC server listening on %s (GC interval: %s, Watch buffer size: %s )", fmt.Sprintf(":%d", *port), gcInterval.String(), fmt.Sprintf("%d", *watchBufferSize))
 	if err := s.Serve(lis); err != nil {
 		log.Fatalf("failed to serve: %v", err)
 	}
