@@ -11,6 +11,26 @@ endpoint: http://192.168.0.119:3001 # External service endpoint.  <--- Все р
 Этот R&D скетч появился как альтернатива https://discovery.talos.dev/ в airgap проектах, где нет возможности приобрести сервисный пакет Omni, 
 доступ к discovery.talos.dev не возможен, а динамика в обнаружении узлов кластера требуется (в частности, это требование для KubeSpan)
 
+Быстрый старт для использования:
+1) Docker/Podman container:
+```
+docker run --rm ghcr.io/vitaly-zverev/tdiscovery:latest
+Unable to find image 'ghcr.io/vitaly-zverev/tdiscovery:latest' locally
+latest: Pulling from vitaly-zverev/tdiscovery
+Digest: sha256:e55b1d56bda5d509d6e7b6b0a63ad54f717d63e5f093eee144e6c94821e2eeec
+Status: Downloaded newer image for ghcr.io/vitaly-zverev/tdiscovery:latest
+2026/08/15 13:45:43 gRPC server listening on :3001 (GC interval: 15s, Watch buffer size: 32 )
+....
+podman run --rm ghcr.io/vitaly-zverev/tdiscovery:latest
+Trying to pull ghcr.io/vitaly-zverev/tdiscovery:latest...
+Getting image source signatures
+Copying blob b3d88a1ee49d done
+Copying config 7cf628dd20 done
+Writing manifest to image destination
+Storing signatures
+2026/08/15 13:48:37 gRPC server listening on :3001 (GC interval: 15s, Watch buffer size: 32 )
+```
+
 Быстрый старт для разработки:
 
 Пререквизиты:
