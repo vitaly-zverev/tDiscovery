@@ -210,9 +210,15 @@ jobs:
       - name: Verify manifest
         run: |
           IMAGE="${{ env.REGISTRY }}/${{ steps.repo_name.outputs.repo_name }}"
-          for tag in ${{ steps.meta.outputs.tags }}; do
-            echo "Inspecting $tag"
-            docker buildx imagetools inspect "$tag" || echo "Failed to inspect $tag"
+          
+          echo "Verifying manifests:"
+          
+          # Parse tags from JSON using jq
+          echo '${{ steps.meta.outputs.json }}' | jq -r '.tags[]' | while IFS= read -r tag; do
+            if [ -n "$tag" ]; then
+              echo "Inspecting $tag"
+              docker buildx imagetools inspect "$tag" || echo "Failed to inspect $tag"
+            fi
           done
 
   # JOB 3: Upload to GitHub Release
