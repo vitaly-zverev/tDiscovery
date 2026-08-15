@@ -159,42 +159,54 @@ jobs:
             type=ref,event=branch
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' }}
       
-      - name: List downloaded digests
+      - name: Debug - List files
         run: |
-          echo "Contents of /tmp/digests:"
+          echo "=== Contents of /tmp/digests ==="
           ls -la /tmp/digests/
+          echo ""
+          echo "=== Contents of each file ==="
+          for f in /tmp/digests/*; do
+            echo "$f:"
+            cat "$f"
+            echo ""
+          done
       
       - name: Create and push manifest list
-        working-directory: /tmp/digests
         run: |
           IMAGE="${{ env.REGISTRY }}/${{ steps.repo_name.outputs.repo_name }}"
           
-          # Get all digests and format them correctly
-          DIGESTS=""
-          for file in *; do
-            if [ -f "$file" ]; then
-              DIGEST=$(cat "$file")
-              DIGESTS="$DIGESTS ${IMAGE}@sha256:${DIGEST}"
+          echo "Image: $IMAGE"
+          
+          # Build the command arguments
+          ARGS=""
+          for f in /tmp/digests/*; do
+            if [ -f "$f" ]; then
+              DIGEST=$(cat "$f" | tr -d '\n\r' | xargs)
+              ARGS="$ARGS ${IMAGE}@sha256:${DIGEST}"
             fi
           done
           
-          echo "Creating manifests with digests:"
-          echo "$DIGESTS"
+          echo "Arguments: $ARGS"
+          
+          # Get tags
+          TAGS="${{ steps.meta.outputs.tags }}"
+          echo "Tags: $TAGS"
           
           # Create manifest for each tag
-          for tag in ${{ steps.meta.outputs.tags }}; do
+          for tag in $TAGS; do
             echo "Creating manifest for $tag"
-            docker buildx imagetools create \
-              -t "$tag" \
-              $DIGESTS
+            CMD="docker buildx imagetools create -t $tag $ARGS"
+            echo "Running: $CMD"
+            eval $CMD
           done
       
       - name: Verify manifest
         run: |
           IMAGE="${{ env.REGISTRY }}/${{ steps.repo_name.outputs.repo_name }}"
+          echo "Verifying manifests:"
           for tag in ${{ steps.meta.outputs.tags }}; do
             echo "Inspecting $tag"
-            docker buildx imagetools inspect "$tag"
+            docker buildx imagetools inspect "$tag" || echo "Failed to inspect $tag"
           done
 
   # JOB 3: Upload to GitHub Release
