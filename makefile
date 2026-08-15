@@ -13,10 +13,11 @@ ARCH ?= $(shell go env GOARCH)
 all: proto build
 
 proto:
-	protoc -I ../discovery-api/api --proto_path=../discovery-api  --go_out=../discovery-api  --go-grpc_out=../discovery-api --go_opt=paths=source_relative  --go-grpc_opt=paths=source_relative  api/v1alpha1/server/cluster.proto
+	protoc -I ./discovery-api/api --proto_path=./discovery-api  --go_out=./discovery-api  --go-grpc_out=./discovery-api \
+	--go_opt=paths=source_relative  --go-grpc_opt=paths=source_relative --experimental_allow_proto3_optional api/v1alpha1/server/cluster.proto
 
 build:
-	GOOS=$(OS) GOARCH=$(ARCH) go build -o _out/$(BINARY_NAME) $(MAIN_FILE)
+	GOOS=$(OS) GOARCH=$(ARCH) go build  -tags netgo -ldflags '-extldflags "-static"' -o _out/$(BINARY_NAME) $(MAIN_FILE)
 
 clean:
 	rm -f _out/$(BINARY_NAME)
