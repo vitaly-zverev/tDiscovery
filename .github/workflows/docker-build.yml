@@ -87,10 +87,12 @@ jobs:
         run: |
           mkdir -p /tmp/digests
           digest="${{ steps.build.outputs.digest }}"
-          echo "Saving digest: $digest"
-          # Сохраняем диджест в файл с именем платформы
+          echo "Raw digest: $digest"
+          # Убираем префикс sha256: если он есть
+          CLEAN_DIGEST=$(echo "$digest" | sed 's/^sha256://')
+          echo "Clean digest: $CLEAN_DIGEST"
           PLATFORM_NAME=$(echo "${{ matrix.platform }}" | tr '/' '-')
-          echo "$digest" > "/tmp/digests/${PLATFORM_NAME}.txt"
+          echo "$CLEAN_DIGEST" > "/tmp/digests/${PLATFORM_NAME}.txt"
           echo "Content of /tmp/digests:"
           ls -la /tmp/digests/
           cat "/tmp/digests/${PLATFORM_NAME}.txt"
@@ -177,7 +179,12 @@ jobs:
             if [ -f "$f" ] && [ -s "$f" ]; then
               DIGEST=$(cat "$f" | tr -d '\n\r' | xargs)
               if [ -n "$DIGEST" ]; then
-                ARGS="$ARGS ${IMAGE}@sha256:${DIGEST}"
+                # Добавляем префикс sha256: только если его нет
+                if [[ "$DIGEST" != sha256:* ]]; then
+                  ARGS="$ARGS ${IMAGE}@sha256:${DIGEST}"
+                else
+                  ARGS="$ARGS ${IMAGE}@${DIGEST}"
+                fi
                 echo "Added digest from $f: $DIGEST"
               fi
             fi
