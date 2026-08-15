@@ -13,7 +13,6 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
 
 jobs:
   # JOB 1: Build multi-platform images
@@ -37,6 +36,13 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       
+      - name: Convert repository name to lowercase
+        id: repo_name
+        run: |
+          REPO_NAME=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+          echo "repo_name=$REPO_NAME" >> $GITHUB_OUTPUT
+          echo "Repository name: $REPO_NAME"
+      
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
         with:
@@ -56,7 +62,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          images: ${{ env.REGISTRY }}/${{ steps.repo_name.outputs.repo_name }}
           tags: |
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
@@ -92,7 +98,6 @@ jobs:
       - name: Prepare artifact name
         id: artifact_name
         run: |
-          # Convert platform to safe name
           SAFE_NAME=$(echo "${{ matrix.platform }}" | tr '/' '-')
           echo "safe_name=$SAFE_NAME" >> $GITHUB_OUTPUT
       
@@ -117,6 +122,13 @@ jobs:
       id-token: write
     
     steps:
+      - name: Convert repository name to lowercase
+        id: repo_name
+        run: |
+          REPO_NAME=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+          echo "repo_name=$REPO_NAME" >> $GITHUB_OUTPUT
+          echo "Repository name: $REPO_NAME"
+      
       - name: Download digests
         uses: actions/download-artifact@v4
         with:
@@ -138,7 +150,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          images: ${{ env.REGISTRY }}/${{ steps.repo_name.outputs.repo_name }}
           tags: |
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
@@ -155,8 +167,16 @@ jobs:
       - name: Create and push manifest list
         working-directory: /tmp/digests
         run: |
-          # Get all digests
-          DIGESTS=$(printf '${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@sha256:%s ' *)
+          IMAGE="${{ env.REGISTRY }}/${{ steps.repo_name.outputs.repo_name }}"
+          
+          # Get all digests and format them correctly
+          DIGESTS=""
+          for file in *; do
+            if [ -f "$file" ]; then
+              DIGEST=$(cat "$file")
+              DIGESTS="$DIGESTS ${IMAGE}@sha256:${DIGEST}"
+            fi
+          done
           
           echo "Creating manifests with digests:"
           echo "$DIGESTS"
@@ -171,6 +191,7 @@ jobs:
       
       - name: Verify manifest
         run: |
+          IMAGE="${{ env.REGISTRY }}/${{ steps.repo_name.outputs.repo_name }}"
           for tag in ${{ steps.meta.outputs.tags }}; do
             echo "Inspecting $tag"
             docker buildx imagetools inspect "$tag"
@@ -190,6 +211,12 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+      
+      - name: Convert repository name to lowercase
+        id: repo_name
+        run: |
+          REPO_NAME=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+          echo "repo_name=$REPO_NAME" >> $GITHUB_OUTPUT
       
       - name: Extract version
         id: version
@@ -211,7 +238,7 @@ jobs:
       - name: Pull and save Docker images
         run: |
           mkdir -p release-images
-          IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.version }}"
+          IMAGE="${{ env.REGISTRY }}/${{ steps.repo_name.outputs.repo_name }}:${{ steps.version.outputs.version }}"
           
           echo "Pulling $IMAGE"
           docker pull "$IMAGE"
