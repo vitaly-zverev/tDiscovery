@@ -89,11 +89,17 @@ jobs:
           digest="${{ steps.build.outputs.digest }}"
           touch "/tmp/digests/${digest#sha256:}"
       
+      - name: Prepare artifact name
+        id: artifact_name
+        run: |
+          # Convert platform to safe name
+          SAFE_NAME=$(echo "${{ matrix.platform }}" | tr '/' '-')
+          echo "safe_name=$SAFE_NAME" >> $GITHUB_OUTPUT
+      
       - name: Upload digest
         uses: actions/upload-artifact@v4
         with:
-          # Заменяем / на - в имени артефакта
-          name: digests-${{ matrix.platform }}-${{ github.run_id }}
+          name: digests-${{ steps.artifact_name.outputs.safe_name }}
           path: /tmp/digests/*
           if-no-files-found: error
           retention-days: 1
@@ -115,7 +121,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: /tmp/digests
-          pattern: digests-*-${{ github.run_id }}
+          pattern: digests-*
           merge-multiple: true
       
       - name: Set up Docker Buildx
@@ -141,11 +147,19 @@ jobs:
             type=ref,event=branch
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' }}
       
+      - name: List downloaded digests
+        run: |
+          echo "Contents of /tmp/digests:"
+          ls -la /tmp/digests/
+      
       - name: Create and push manifest list
         working-directory: /tmp/digests
         run: |
           # Get all digests
           DIGESTS=$(printf '${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@sha256:%s ' *)
+          
+          echo "Creating manifests with digests:"
+          echo "$DIGESTS"
           
           # Create manifest for each tag
           for tag in ${{ steps.meta.outputs.tags }}; do
