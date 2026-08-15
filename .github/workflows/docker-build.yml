@@ -166,7 +166,7 @@ jobs:
               echo ""
             fi
           done
-      
+          
       - name: Create and push manifest list
         run: |
           IMAGE="${{ env.REGISTRY }}/${{ steps.repo_name.outputs.repo_name }}"
@@ -179,7 +179,6 @@ jobs:
             if [ -f "$f" ] && [ -s "$f" ]; then
               DIGEST=$(cat "$f" | tr -d '\n\r' | xargs)
               if [ -n "$DIGEST" ]; then
-                # Добавляем префикс sha256: только если его нет
                 if [[ "$DIGEST" != sha256:* ]]; then
                   ARGS="$ARGS ${IMAGE}@sha256:${DIGEST}"
                 else
@@ -192,23 +191,22 @@ jobs:
           
           if [ -z "$ARGS" ]; then
             echo "ERROR: No valid digests found!"
-            ls -la /tmp/digests/
             exit 1
           fi
           
           echo "Full arguments: $ARGS"
           
-          # Get tags
-          TAGS="${{ steps.meta.outputs.tags }}"
-          echo "Tags to create:"
-          echo "$TAGS"
+          # Parse tags from JSON
+          TAGS=$(echo '${{ steps.meta.outputs.json }}' | jq -r '.tags[]')
           
           # Create manifest for each tag
-          for tag in $TAGS; do
-            echo "Creating manifest for $tag"
-            docker buildx imagetools create -t "$tag" $ARGS
-          done
-      
+          while IFS= read -r tag; do
+            if [ -n "$tag" ]; then
+              echo "Creating manifest for $tag"
+              docker buildx imagetools create -t "$tag" $ARGS
+            fi
+          done <<< "$TAGS"     
+
       - name: Verify manifest
         run: |
           IMAGE="${{ env.REGISTRY }}/${{ steps.repo_name.outputs.repo_name }}"
