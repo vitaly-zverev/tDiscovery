@@ -32,6 +32,7 @@ Storing signatures
 ....
 ```
 2) Отказоустойчивый сервис самообслуживания Talos кластера:
+
 2.1) Создаем тестовый кластер (для экономии ресурсов с одним управяющим узлом и одним рабочим):
 ```
 sudo --preserve-env=HOME talosctl cluster create dev   \
@@ -68,11 +69,11 @@ waiting for etcd members to be control plane nodes: OK
 ```
 2.2) Размещаем приложение с одной репликой в deployment (kubePrism по умолчанию включен и одной реплики достаточно для отказоустойчивости всего механизма самообслуживания)
 ```
-kubectl apply -f /home/vzverev/tDiscovery/samples/talos_internal_self_service/discovery-app.yaml
+kubectl apply -f ~/tDiscovery/samples/talos_internal_self_service/discovery-app.yaml
 ```
 2.3) Размещаем сервис c явным указанием ClusterIP:
 ```
-kubectl apply -f /home/vzverev/tDiscovery/samples/talos_internal_self_service/discovery-service_explicit-clusterIP.yaml
+kubectl apply -f ~/tDiscovery/samples/talos_internal_self_service/discovery-service_explicit-clusterIP.yaml
 
 Discovery работает на всех узлах кластера.
 
