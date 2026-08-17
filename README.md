@@ -32,8 +32,8 @@ Storing signatures
 ....
 ```
 2) Отказоустойчивый сервис самообслуживания Talos кластера:
-```
 2.1) Создаем тестовый кластер (для экономии ресурсов с одним управяющим узлом и одним рабочим):
+```
 sudo --preserve-env=HOME talosctl cluster create dev   \
     --provisioner qemu --name demo --with-debug   \
     --registry-mirror registry.k8s.io='https://registry-k8s-io.mirrors.sjtug.sjtu.edu.cn'  \
