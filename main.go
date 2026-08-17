@@ -452,12 +452,13 @@ func main() {
 		showVersion      = flag.Bool("version", false, "Show version information and exit")
 	)
 
+	flag.Parse()
+
 	// Если запрошена версия — показываем и выходим
 	if *showVersion {
 		printVersion()
 		os.Exit(0)
 	}
-	flag.Parse()
 
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", *port))
 	if err != nil {
