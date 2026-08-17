@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: load-generator
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: load-generator
+  template:
+    metadata:
+      labels:
+        app: load-generator
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+      - name: loader
+        image: alpine:latest
+        command:
+        - /bin/sh
+        - -c
+        - |
+          apk add --no-cache grpcurl
+          echo "Load generator started"
+          while true; do
+            for i in $(seq 1 10); do
+              grpcurl -plaintext \
+                -d "{\"clusterId\": \"load-$i\", \"affiliateId\": \"node-$(date +%s%N)\", \"ttl\": \"30s\"}" \
+                discovery-service.default.svc.cluster.local:3001 \
+                sidero.discovery.server.Cluster/AffiliateUpdate 2>/dev/null &
+            done
+            sleep 0.1
+          done
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop: ["ALL"]
+          runAsNonRoot: true
+          runAsUser: 1000
+          runAsGroup: 1000
+          seccompProfile:
+            type: RuntimeDefault
+        resources:
+          requests:
+            cpu: 50m
+            memory: 32Mi
+          limits:
+            cpu: 200m
+            memory: 128Mi

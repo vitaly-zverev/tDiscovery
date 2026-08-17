@@ -29,6 +29,53 @@ Copying config 7cf628dd20 done
 Writing manifest to image destination
 Storing signatures
 2026/08/15 13:48:37 gRPC server listening on :3001 (GC interval: 15s, Watch buffer size: 32 )
+....
+```
+2) Отказоустойчивый сервис самообслуживания Talos кластера:
+```
+2.1) Создаем тестовый кластер (для экономии ресурсов с одним управяющим узлом и одним рабочим):
+sudo --preserve-env=HOME talosctl cluster create dev   \
+    --provisioner qemu --name demo --with-debug   \
+    --registry-mirror registry.k8s.io='https://registry-k8s-io.mirrors.sjtug.sjtu.edu.cn'  \
+    --cpus 1 --cpus-workers 1  --memory 1700m  --memory-workers 1000m \
+    --config-patch '
+machine:
+  time:
+    servers:
+      - "0.rhel.pool.ntp.org"
+      - "1.rhel.pool.ntp.org"
+cluster:
+  discovery:
+    registries:
+      service:
+        endpoint: "http://10.109.183.11:3001"
+'
+generating PKI and tokens
+creating state directory in "/home/vzverev/.talos/clusters/demo"
+creating network demo
+creating load balancer
+creating dnsd
+creating controlplane nodes
+creating dhcpd
+creating worker nodes
+renamed talosconfig context "demo" -> "demo-32"
+waiting for Talos API (to bootstrap the cluster)
+bootstrapping cluster
+waiting for etcd to be healthy: OK
+waiting for etcd members to be consistent across nodes: OK
+waiting for etcd members to be control plane nodes: OK
+......
+```
+2.2) Размещаем приложение с одной репликой в deployment (kubePrism по умолчанию включен и одной реплики достаточно для отказоустойчивости всего механизма самообслуживания)
+```
+kubectl apply -f /home/vzverev/tDiscovery/samples/talos_internal_self_service/discovery-app.yaml
+```
+2.3) Размещаем сервис c явным указанием ClusterIP:
+```
+kubectl apply -f /home/vzverev/tDiscovery/samples/talos_internal_self_service/discovery-service_explicit-clusterIP.yaml
+
+Discovery работает на всех узлах кластера.
+
 ```
 
 Быстрый старт для разработки:

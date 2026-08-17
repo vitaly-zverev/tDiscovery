@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: discovery-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: discovery-app
+  template:
+    metadata:
+      labels:
+        app: discovery-app
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault    
+      containers:
+      - name: discovery
+        image: ghcr.io/vitaly-zverev/tdiscovery:latest
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop: ["ALL"]
+          runAsNonRoot: true
+          runAsUser: 1000
+          runAsGroup: 1000
+          seccompProfile:
+            type: RuntimeDefault        
+        ports:
+        - containerPort: 3001
+        resources:
+          requests:
+            memory: "8Mi"
+            cpu: "10m"
+          limits:
+            memory: "16Mi"
+            cpu: "50m"
+        # === НАСТРОЙКА ПРОБ ===
+        livenessProbe:
+          #grpc:
+          tcpSocket:
+            port: 3001
+          initialDelaySeconds: 2   # Даем время на запуск (сервер поднимается быстро)
+          periodSeconds: 10         # Проверяем каждые 10 секунд
+          timeoutSeconds: 5
+          failureThreshold: 3       # После 3 неудач рестарт
+        readinessProbe:
+          #grpc:
+          tcpSocket:
+            port: 3001
+          initialDelaySeconds: 1    # Стартуем проверку раньше
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3       # После 3 неудач Pod выводится из сервиса

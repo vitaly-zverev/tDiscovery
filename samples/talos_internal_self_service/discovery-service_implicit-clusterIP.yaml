@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: discovery-service
+spec:
+  selector:
+    app: discovery-app         # ← Этот selector должен совпадать с labels ваших Pod'ов
+  ports:
+    - port: 3001
+      targetPort: 3001         # ← Порт, который слушает ваш gRPC-сервер внутри контейнера
+  # clusterIP: xxx.xxx.xxx.xxx # ← Если адрес не задан явно, то он будет выделен динамически из пула в момент создания сервиса и закреплен за ним в etcd (его будем указывать при конфигурировании в cluster.discovery.registries.service.endpoint)
+  type: ClusterIP              # ← Внутренний IP, доступный только внутри кластера

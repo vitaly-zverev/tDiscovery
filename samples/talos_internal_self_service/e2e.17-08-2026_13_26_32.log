@@ -1,0 +1,84 @@
+generating PKI and tokens
+creating state directory in "/home/vzverev/.talos/clusters/demo"
+creating network demo
+creating load balancer
+creating dnsd
+creating controlplane nodes
+creating dhcpd
+creating worker nodes
+renamed talosconfig context "demo" -> "demo-48"
+waiting for Talos API (to bootstrap the cluster)
+bootstrapping cluster
+waiting for etcd to be healthy: ...
+waiting for etcd to be healthy: 1 error occurred:
+    * 10.5.0.2: service "etcd" not in expected state "Running": current state [Preparing] Running pre state
+waiting for etcd to be healthy: 1 error occurred:
+    * 10.5.0.2: service is not healthy: etcd
+waiting for etcd to be healthy: OK
+waiting for etcd members to be consistent across nodes: ...
+waiting for etcd members to be consistent across nodes: OK
+waiting for etcd members to be control plane nodes: ...
+waiting for etcd members to be control plane nodes: OK
+waiting for apid to be ready: ...
+waiting for apid to be ready: 1 error occurred:
+    * 10.5.0.3: rpc error: code = Unavailable desc = connection error: desc = "transport: Error while dialing: dial tcp 10.5.0.3:50000: connect: connection refused"
+waiting for apid to be ready: OK
+waiting for all nodes memory sizes: ...
+waiting for all nodes memory sizes: OK
+waiting for all nodes disk sizes: ...
+waiting for all nodes disk sizes: OK
+waiting for no diagnostics: ...
+waiting for no diagnostics: OK
+waiting for kubelet to be healthy: ...
+waiting for kubelet to be healthy: OK
+waiting for all nodes to finish boot sequence: ...
+waiting for all nodes to finish boot sequence: OK
+waiting for all k8s nodes to report: ...
+waiting for all k8s nodes to report: OK
+waiting for all control plane static pods to be running: ...
+waiting for all control plane static pods to be running: OK
+waiting for all control plane components to be ready: ...
+waiting for all control plane components to be ready: OK
+waiting for all k8s nodes to report ready: ...
+waiting for all k8s nodes to report ready: some nodes are not ready: [demo-controlplane-1 demo-worker-1]
+waiting for all k8s nodes to report ready: some nodes are not ready: [demo-worker-1]
+waiting for all k8s nodes to report ready: OK
+waiting for kube-proxy to report ready: ...
+waiting for kube-proxy to report ready: some pods are not ready: [kube-proxy-d4dx6]
+waiting for kube-proxy to report ready: OK
+waiting for coredns to report ready: ...
+waiting for coredns to report ready: OK
+waiting for all k8s nodes to report schedulable: ...
+waiting for all k8s nodes to report schedulable: OK
+
+merging kubeconfig into "/home/vzverev/.kube/config"
+renamed cluster "demo" -> "demo-5"
+renamed auth info "admin@demo" -> "admin@demo-5"
+renamed context "admin@demo" -> "admin@demo-5"
+PROVISIONER           qemu
+NAME                  demo
+NETWORK NAME          demo
+NETWORK CIDR          10.5.0.0/24
+NETWORK GATEWAY       10.5.0.1
+NETWORK MTU           1500
+KUBERNETES ENDPOINT   https://10.5.0.1:6443
+
+NODES:
+
+NAME                  TYPE           IP         CPU    RAM      DISK
+demo-controlplane-1   controlplane   10.5.0.2   1.00   2.0 GB   6.4 GB
+demo-worker-1         worker         10.5.0.3   1.00   1.4 GB   6.4 GB
+deployment.apps/discovery-deployment created
+service/discovery-service created
+NAME                                       READY   STATUS    RESTARTS   AGE
+pod/discovery-deployment-55c7f4787-swjrg   0/1     Pending   0          1s
+
+NAME                        TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)    AGE
+service/discovery-service   ClusterIP   10.109.183.11   <none>        3001/TCP   1s
+service/kubernetes          ClusterIP   10.96.0.1       <none>        443/TCP    4m46s
+
+NAME                                   READY   UP-TO-DATE   AVAILABLE   AGE
+deployment.apps/discovery-deployment   0/1     0            0           1s
+
+NAME                                             DESIRED   CURRENT   READY   AGE
+replicaset.apps/discovery-deployment-55c7f4787   1         1         0       1s
