@@ -253,7 +253,6 @@ jobs:
         run: |
           VERSION=${GITHUB_REF#refs/tags/}
           echo "version=$VERSION" >> $GITHUB_OUTPUT
-          # Docker тег без префикса v
           DOCKER_VERSION="${VERSION#v}"
           echo "docker_version=$DOCKER_VERSION" >> $GITHUB_OUTPUT
           echo "Git tag: $VERSION, Docker tag: $DOCKER_VERSION"
@@ -281,30 +280,92 @@ jobs:
             echo "❌ Image does not exist"
           fi
       
-      - name: Pull and save Docker images
+      - name: Create release artifacts (tar and binaries)
         if: steps.check_image.outputs.exists == 'true'
         run: |
-          mkdir -p release-images
+          mkdir -p release-images release-binaries
           IMAGE="${{ env.REGISTRY }}/${{ steps.repo_name.outputs.repo_name }}:${{ steps.version.outputs.docker_version }}"
           
           echo "Using image: $IMAGE"
-          echo "Pulling $IMAGE"
-          docker pull "$IMAGE"
           
-          # Save images for each platform
           platforms=("amd64" "arm64")
           for platform in "${platforms[@]}"; do
-            echo "Saving linux/$platform image"
+            echo "=== Processing linux/$platform ==="
+            
+            # Сохраняем полный образ как tar архив
+            echo "Saving image for linux/$platform"
             docker pull --platform linux/$platform "$IMAGE"
             docker save "$IMAGE" -o "release-images/tdiscovery-linux-$platform.tar"
+            
+            # Извлекаем бинарник из образа
+            echo "Extracting binary for linux/$platform"
+            container_id=$(docker create --platform linux/$platform "$IMAGE" /tdiscovery)
+            docker cp "$container_id":/tdiscovery "release-binaries/tdiscovery-linux-$platform"
+            docker rm "$container_id"
+            chmod +x "release-binaries/tdiscovery-linux-$platform"
+            
+            echo "✅ Extracted binary for linux/$platform"
           done
+          
+          echo "=== All artifacts created ==="
+          echo "Tar archives:"
+          ls -la release-images/
+          echo ""
+          echo "Binaries:"
+          ls -la release-binaries/
       
-      - name: Create checksums
+      - name: Test binaries version
         if: steps.check_image.outputs.exists == 'true'
-        working-directory: release-images
         run: |
-          sha256sum *.tar > checksums.txt
-          cat checksums.txt
+          echo "=== Testing binary versions ==="
+          EXPECTED_VERSION="v${{ steps.version.outputs.docker_version }}"
+          echo "Expected version: $EXPECTED_VERSION"
+          
+          platforms=("amd64" "arm64")
+          all_passed=true
+          
+          for platform in "${platforms[@]}"; do
+            echo "=== Testing linux/$platform ==="
+            BINARY="release-binaries/tdiscovery-linux-$platform"
+            
+            # Проверяем архитектуру
+            file "$BINARY"
+            
+            # Запускаем бинарник в эмуляции и проверяем версию
+            OUTPUT=$(docker run --rm --platform linux/$platform \
+              -v "$(pwd)/release-binaries:/work" \
+              alpine:latest \
+              /work/tdiscovery-linux-$platform -version 2>&1)
+            
+            echo "Output: $OUTPUT"
+            
+            # Проверяем, что версия в выводе совпадает с ожидаемой
+            if echo "$OUTPUT" | grep -q "version: $EXPECTED_VERSION"; then
+              echo "✅ linux/$platform: version check PASSED"
+            else
+              echo "❌ linux/$platform: version check FAILED"
+              echo "Expected to find: version: $EXPECTED_VERSION"
+              echo "Got: $OUTPUT"
+              all_passed=false
+            fi
+          done
+          
+          if [ "$all_passed" = "false" ]; then
+            echo "❌ Some version checks failed!"
+            exit 1
+          fi
+          echo "✅ All version checks passed!"
+      
+      - name: Create checksums for all artifacts
+        if: steps.check_image.outputs.exists == 'true'
+        run: |
+          cd release-images
+          sha256sum *.tar > checksums-images.txt
+          cat checksums-images.txt
+          
+          cd ../release-binaries
+          sha256sum * > checksums-binaries.txt
+          cat checksums-binaries.txt
       
       - name: Upload to GitHub Release
         if: steps.check_image.outputs.exists == 'true'
@@ -312,7 +373,9 @@ jobs:
         with:
           files: |
             release-images/*.tar
-            release-images/checksums.txt
+            release-images/checksums-images.txt
+            release-binaries/*
+            release-binaries/checksums-binaries.txt
           generate_release_notes: true
           name: Release ${{ steps.version.outputs.version }}
           tag_name: ${{ steps.version.outputs.version }}
