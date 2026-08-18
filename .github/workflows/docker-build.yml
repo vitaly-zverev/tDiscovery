@@ -313,6 +313,11 @@ jobs:
           echo ""
           echo "Binaries:"
           ls -la release-binaries/
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64,arm          
       
       - name: Test binaries version
         if: steps.check_image.outputs.exists == 'true'
