@@ -380,7 +380,6 @@ jobs:
             release-images/*.tar
             release-images/checksums-images.txt
             release-binaries/*
-            release-binaries/checksums-binaries.txt
           generate_release_notes: true
           name: Release ${{ steps.version.outputs.version }}
           tag_name: ${{ steps.version.outputs.version }}
