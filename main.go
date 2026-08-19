@@ -15,6 +15,8 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/peer"
 	"google.golang.org/grpc/reflection"
+	reflectionv1 "google.golang.org/grpc/reflection/grpc_reflection_v1"
+	reflectionv1alpha "google.golang.org/grpc/reflection/grpc_reflection_v1alpha"
 
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/proto"
@@ -416,28 +418,19 @@ func printVersion() {
 }
 
 func main() {
-	// Получаем данные из bindata
-	descriptorData, err := descriptor.Asset("discovery-api/api/descriptor.pb")
-	if err != nil {
-		log.Fatalf("Failed to load embedded descriptor: %v", err)
-	}
 
-	// Парсим дескриптор
 	var fileDescriptorSet descriptorpb.FileDescriptorSet
-	if err := proto.Unmarshal(descriptorData, &fileDescriptorSet); err != nil {
-		log.Fatalf("Failed to parse descriptor set: %v", err)
+	if err := proto.Unmarshal(descriptor.Set, &fileDescriptorSet); err != nil {
+		log.Fatalf("Failed to parse embedded descriptor set: %v", err)
 	}
 
-	// Регистрируем дескрипторы - правильный синтаксис
 	registry := &protoregistry.Files{}
 	for _, fd := range fileDescriptorSet.File {
-		// Создаем файловые дескрипторы
 		fileDesc, err := protodesc.NewFile(fd, registry)
 		if err != nil {
 			log.Printf("Warning: failed to load file descriptor: %v", err)
 			continue
 		}
-		// Регистрируем файл в registry
 		if err := registry.RegisterFile(fileDesc); err != nil {
 			log.Printf("Warning: failed to register file descriptor: %v", err)
 		}
@@ -472,17 +465,24 @@ func main() {
 
 	pb.RegisterClusterServer(s, ns)
 
+	log.Printf("tDiscovery version: %s (%s)", version, gitCommit)
+
 	// Включаем рефлексию ТОЛЬКО если указан флаг
 	if *enableReflection {
-		reflection.Register(s)
-		log.Printf("gRPC reflection API enabled")
-	}
+		opts := reflection.ServerOptions{
+			Services:           s,
+			DescriptorResolver: registry,
+			// ExtensionResolver не задан — упадёт на protoregistry.GlobalTypes,
+			// расширений (proto extensions) в этом проекте нет, этого достаточно
+		}
+		reflectionv1.RegisterServerReflectionServer(s, reflection.NewServerV1(opts))
+		reflectionv1alpha.RegisterServerReflectionServer(s, reflection.NewServer(opts))
 
-	log.Printf("tDiscovery version: %s (%s)", version, gitCommit)
-	log.Printf("gRPC server listening on :%d (GC interval: %s, Watch buffer size: %d)", *port, gcInterval.String(), *watchBufferSize)
-	if *enableReflection {
+		log.Printf("gRPC reflection API (v1 + v1alpha, embedded descriptor set)")
 		log.Printf("⚠️  Reflection is ENABLED. Be aware to use -reflection flag in production.")
 	}
+
+	log.Printf("gRPC server listening on :%d (GC interval: %s, Watch buffer size: %d)", *port, gcInterval.String(), *watchBufferSize)
 
 	if err := s.Serve(lis); err != nil {
 		log.Fatalf("failed to serve: %v", err)

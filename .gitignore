@@ -4,4 +4,5 @@
 
 _out
 discovery-api
-internal
+go.work
+go.work.sum
